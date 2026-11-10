@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products | Ecommerce Dashboard</title>
+    <!-- Google Fonts for better typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Shared CSS -->
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <h1>📦 Product Catalog</h1>
+        <div class="nav-links">
+            <a href="/dashboard" class="btn btn-secondary">🏠 Dashboard</a>
+            <a href="/users" class="btn btn-secondary">👥 Users</a>
+            <a href="/orders" class="btn btn-secondary">📋 Orders</a>
+        <a th:href="@{/admin/products/new}" class="btn btn-primary">➕ Add Product</a>
+        <a th:href="@{/catalog}" class="btn btn-secondary">🛍️ Shop</a>
+    </div>
+    </div>
+
+    <!-- Search Section -->
+    <div class="card">
+        <div class="search-wrapper">
+            <div class="search-input-group">
+                <input type="text" id="searchInput" placeholder="Search by product name..." aria-label="Search products">
+                <button onclick="loadProducts(0)">🔍 Search</button>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-outline" onclick="clearSearch()">✖ Clear</button>
+                <button class="btn btn-primary" onclick="loadProducts(currentPage)">⟳ Refresh</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Price</th>
+                    <th>Qty</th>
+                    <th>Discount</th>
+                    <th>Expiration</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- Populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-container">
+        <div class="pagination-controls">
+            <button class="pagination-btn" onclick="previousPage()" id="prevBtn">← Previous</button>
+            <div class="page-numbers" id="pageNumbers"></div>
+            <button class="pagination-btn" onclick="nextPage()" id="nextBtn">Next →</button>
+        </div>
+        <div class="page-info">
+            Page <span id="currentPageDisplay">0</span> of <span id="totalPagesDisplay">0</span> 
+            (<span id="totalItemsDisplay">0</span> items)
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <a href="/dashboard">Back to Dashboard</a>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    let currentPage = 0;
+    let totalPages = 0;
+    let totalItems = 0;
+
+    function loadProducts(page) {
+        const search = document.getElementById('searchInput').value;
+        const url = `/api/products?page=${page}&size=50&search=${encodeURIComponent(search)}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                currentPage = data.currentPage;
+                totalPages = data.totalPages;
+                totalItems = data.totalItems;
+                renderTable(data.products);
+                updatePagination();
+            })
+            .catch(error => console.error('Error loading products:', error));
+    }
+
+    function renderTable(products) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        products.forEach(product => {
+            const row = tbody.insertRow();
+            
+            // Product Name
+            row.insertCell(0).textContent = product.productName;
+            
+            // Price with formatting
+            const priceCell = row.insertCell(1);
+            priceCell.textContent = `$${parseFloat(product.productPrice).toFixed(2)}`;
+            priceCell.classList.add('price');
+            
+            // Quantity
+            row.insertCell(2).textContent = product.noOfQuantity;
+            
+            // Discount as badge
+            const discountCell = row.insertCell(3);
+            const discountSpan = document.createElement('span');
+            discountSpan.textContent = `${product.voucherDiscount}% off`;
+            discountSpan.classList.add('badge', 'badge-success');
+            discountCell.appendChild(discountSpan);
+            
+            // Expiration date with badge
+            const expCell = row.insertCell(4);
+            if (product.expirationDate) {
+                const expSpan = document.createElement('span');
+                expSpan.textContent = product.expirationDate;
+                expSpan.classList.add('badge', 'badge-warning');
+                expCell.appendChild(expSpan);
+            } else {
+                expCell.textContent = 'N/A';
+                expCell.style.color = '#9aabbf';
+            }
+        });
+    }
+
+    function updatePagination() {
+        document.getElementById('currentPageDisplay').textContent = currentPage + 1;
+        document.getElementById('totalPagesDisplay').textContent = totalPages;
+        document.getElementById('totalItemsDisplay').textContent = totalItems;
+
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        prevBtn.disabled = currentPage === 0;
+        nextBtn.disabled = currentPage >= totalPages - 1;
+
+        const pageNumbersDiv = document.getElementById('pageNumbers');
+        pageNumbersDiv.innerHTML = '';
+        
+        const maxVisible = 7;
+        let startPage = Math.max(0, currentPage - Math.floor(maxVisible / 2));
+        let endPage = Math.min(totalPages - 1, startPage + maxVisible - 1);
+        if (endPage - startPage < maxVisible - 1) {
+            startPage = Math.max(0, endPage - maxVisible + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const span = document.createElement('span');
+            span.textContent = i + 1;
+            span.classList.add('page-number');
+            if (i === currentPage) {
+                span.classList.add('active');
+            }
+            span.onclick = () => loadProducts(i);
+            pageNumbersDiv.appendChild(span);
+        }
+    }
+
+    function previousPage() {
+        if (currentPage > 0) {
+            loadProducts(currentPage - 1);
+        }
+    }
+
+    function nextPage() {
+        if (currentPage < totalPages - 1) {
+            loadProducts(currentPage + 1);
+        }
+    }
+
+    function clearSearch() {
+        document.getElementById('searchInput').value = '';
+        loadProducts(0);
+    }
+
+    // Initial load
+    window.onload = () => loadProducts(0);
+</script>
+<th:block th:replace="fragments/chat-widget :: chat-widget"></th:block>
+
+</body>
+</html>

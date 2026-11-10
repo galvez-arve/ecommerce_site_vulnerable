@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!-- This fragment will be included in your main layout -->
+    <div th:fragment="chat-widget">
+        <!-- Chat Bubble Button -->
+        <div id="chat-bubble" onclick="toggleChat()">
+            💬
+        </div>
+
+        <!-- Chat Window (Hidden by default) -->
+        <div id="chat-window" style="display: none;">
+            <div id="chat-header">
+                <span>🤖 Store Assistant</span>
+                <button onclick="toggleChat()" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">✕</button>
+            </div>
+            <div id="chat-messages">
+                <div class="message bot-message">
+                    <span>Hello! I can help with product questions and orders. What can I do for you?</span>
+                </div>
+            </div>
+            <div id="chat-input-area">
+                <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off" />
+                <button id="send-button" onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+
+        <style>
+            #chat-bubble {
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                width: 60px;
+                height: 60px;
+                background: #4f46e5;
+                color: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 28px;
+                cursor: pointer;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 9998;
+                transition: transform 0.2s;
+            }
+            #chat-bubble:hover {
+                transform: scale(1.05);
+                background: #4338ca;
+            }
+            #chat-window {
+                position: fixed;
+                bottom: 100px;
+                right: 30px;
+                width: 380px;
+                height: 550px;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                z-index: 9999;
+                border: 1px solid #e2e8f0;
+            }
+            #chat-header {
+                background: #4f46e5;
+                color: white;
+                padding: 15px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-weight: 600;
+            }
+            #chat-messages {
+                flex: 1;
+                padding: 15px;
+                overflow-y: auto;
+                background: #f8fafc;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .message {
+                display: flex;
+                margin-bottom: 5px;
+            }
+            .user-message {
+                justify-content: flex-end;
+            }
+            .bot-message {
+                justify-content: flex-start;
+            }
+            .message span {
+                max-width: 80%;
+                padding: 10px 14px;
+                border-radius: 18px;
+                font-size: 0.9rem;
+                line-height: 1.4;
+                word-wrap: break-word;
+            }
+            .user-message span {
+                background: #4f46e5;
+                color: white;
+                border-bottom-right-radius: 4px;
+            }
+            .bot-message span {
+                background: white;
+                color: #1e293b;
+                border: 1px solid #e2e8f0;
+                border-bottom-left-radius: 4px;
+            }
+            #chat-input-area {
+                display: flex;
+                padding: 12px;
+                background: white;
+                border-top: 1px solid #e2e8f0;
+                gap: 8px;
+            }
+            #message-input {
+                flex: 1;
+                padding: 12px 15px;
+                border: 1px solid #cbd5e1;
+                border-radius: 25px;
+                font-size: 0.9rem;
+                outline: none;
+            }
+            #message-input:focus {
+                border-color: #4f46e5;
+            }
+            #send-button {
+                background: #4f46e5;
+                color: white;
+                border: none;
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                cursor: pointer;
+                font-size: 18px;
+                transition: background 0.2s;
+            }
+            #send-button:hover {
+                background: #4338ca;
+            }
+            /* Mobile responsive */
+            @media (max-width: 480px) {
+                #chat-window {
+                    width: 100%;
+                    height: 100%;
+                    bottom: 0;
+                    right: 0;
+                    border-radius: 0;
+                }
+                #chat-bubble {
+                    bottom: 20px;
+                    right: 20px;
+                }
+            }
+        </style>
+
+        <script th:inline="javascript">
+            /*<![CDATA[*/
+            // Configuration - Read from Spring Boot properties
+            const N8N_WEBHOOK_URL = /*[[${@environment.getProperty('n8n.webhook.url')}]]*/ 'http://192.168.55.221:5678/webhook/5e49c37d-b5ef-4bca-9e26-05a3c2b8de84';
+            
+            // Generate session ID
+            const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+
+            const chatMessages = document.getElementById('chat-messages');
+            const messageInput = document.getElementById('message-input');
+
+            function toggleChat() {
+                const window = document.getElementById('chat-window');
+                window.style.display = window.style.display === 'none' ? 'flex' : 'none';
+                if (window.style.display === 'flex') {
+                    document.getElementById('message-input').focus();
+                }
+            }
+
+            function addMessage(text, sender, isError = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', sender + '-message');
+                if (isError) messageDiv.classList.add('error-message');
+                const span = document.createElement('span');
+                span.textContent = text;
+                messageDiv.appendChild(span);
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            function addTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.classList.add('message', 'bot-message', 'typing');
+                typingDiv.id = 'typing-indicator';
+                const span = document.createElement('span');
+                span.textContent = 'Typing...';
+                typingDiv.appendChild(span);
+                chatMessages.appendChild(typingDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            function removeTypingIndicator() {
+                const typing = document.getElementById('typing-indicator');
+                if (typing) typing.remove();
+            }
+
+            async function sendMessage() {
+                const userMessage = messageInput.value.trim();
+                if (!userMessage) return;
+
+                addMessage(userMessage, 'user');
+                messageInput.value = '';
+                addTypingIndicator();
+
+                try {
+                    const response = await fetch(N8N_WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            message: userMessage,
+                            sessionId: sessionId
+                        })
+                    });
+
+                    removeTypingIndicator();
+
+                    if (!response.ok) throw new Error('Server error');
+
+                    const data = await response.json();
+                    const botReply = data.output || data.message || data.text || "I didn't understand that.";
+                    addMessage(botReply, 'bot');
+
+                } catch (error) {
+                    console.error('Chat error:', error);
+                    removeTypingIndicator();
+                    addMessage('Sorry, connection issue. Please try again.', 'bot', true);
+                }
+            }
+
+            // Enter key to send
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+            /*]]>*/
+        </script>
+    </div>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order | Ecommerce</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>✅ Order</h1>
+        <div class="nav-links"><a th:href="@{/catalog}" class="btn btn-secondary">🛍️ Continue Shopping</a></div>
+    </div>
+
+    <div class="card" th:if="${error}">
+        <p style="color:#b91c1c;" th:text="${error}"></p>
+    </div>
+
+    <div class="card" th:if="${orderIds}">
+        <p>Thanks! Order(s) placed:</p>
+        <ul><li th:each="id : ${orderIds}" th:text="${id}"></li></ul>
+        <div th:if="${shippingNotes}">
+            <p><strong>Delivery notes:</strong></p>
+            <!-- Rendered unescaped -> whatever HTML/JS was typed into the
+                 checkout notes field executes here, and again wherever
+                 else shippingNotes is displayed (e.g. admin Orders page). -->
+            <div th:utext="${shippingNotes}"></div>
+        </div>
+    </div>
+
+    <div class="card" th:if="${order}">
+        <p><strong>Order ID:</strong> <span th:text="${order.id}"></span></p>
+        <p><strong>Customer:</strong> <span th:text="${order.name} + ' ' + ${order.lastname}"></span></p>
+        <p><strong>Email:</strong> <span th:text="${order.email_address}"></span></p>
+        <p><strong>Product:</strong> <span th:text="${order.product_name}"></span></p>
+        <p><strong>Quantity:</strong> <span th:text="${order.quantity}"></span></p>
+        <p><strong>Total:</strong> $<span th:text="${order.total_price}"></span></p>
+        <p><strong>Status:</strong> <span th:text="${order.order_status}"></span></p>
+        <div th:if="${order.shipping_notes}">
+            <p><strong>Delivery notes:</strong></p>
+            <div th:utext="${order.shipping_notes}"></div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

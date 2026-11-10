@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout | Ecommerce</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🛒 Checkout</h1>
+        <div class="nav-links" id="navLinks">
+            <a th:href="@{/catalog}" class="btn btn-secondary">🛍️ Keep Shopping</a>
+            <a th:href="@{/login}" class="btn btn-secondary" id="authLink">👤 Login</a>
+        </div>
+    </div>
+
+    <div class="card" th:if="${error}">
+        <p style="color:#b91c1c;" th:text="${error}"></p>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Discount %</th></tr></thead>
+            <tbody>
+                <tr th:each="item : ${items}">
+                    <td th:text="${item.productName}"></td>
+                    <td th:text="${item.quantity}"></td>
+                    <td th:text="'$' + ${item.price}"></td>
+                    <td th:text="${item.discount} + '%'"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(items)}"><td colspan="4" style="text-align:center; padding:30px;">Your cart is empty.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card" style="text-align:right; font-size:1.1rem; font-weight:600;">
+        Total: $<span th:text="${total}"></span>
+    </div>
+
+    <div class="card">
+        <form method="post" th:action="@{/checkout}">
+            <div style="margin-bottom:12px;">
+                <label>Full name for shipping</label>
+                <input type="text" name="shippingName" style="width:100%; padding:8px; margin-top:4px;" required>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label>Delivery notes (optional)</label>
+                <textarea name="shippingNotes" style="width:100%; padding:8px; margin-top:4px;" rows="3"
+                          placeholder="e.g. leave at the gate"></textarea>
+            </div>
+            <!--
+                These two fields exist to demonstrate real-world checkout
+                abuse: overrideTotal lets the client dictate the final price
+                outright, and userId lets the order be attributed to any
+                account id, not just whoever is logged in. Neither is
+                validated server-side. Leave them blank for a normal flow,
+                or set them to see the vulnerability.
+            -->
+            <details style="margin-bottom:12px;">
+                <summary style="cursor:pointer; color:#4f46e5;">Advanced (for testing)</summary>
+                <div style="margin-top:10px;">
+                    <label>Override total price</label>
+                    <input type="text" name="overrideTotal" style="width:100%; padding:8px; margin-top:4px;" placeholder="leave blank to use computed total">
+                </div>
+                <div style="margin-top:10px;">
+                    <label>Place order as user id</label>
+                    <input type="text" name="userId" style="width:100%; padding:8px; margin-top:4px;" placeholder="leave blank to use your session">
+                </div>
+                <div style="margin-top:10px;">
+                    <label>Order status</label>
+                    <input type="text" name="orderStatus" style="width:100%; padding:8px; margin-top:4px;" placeholder="leave blank for Pending">
+                </div>
+            </details>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Place Order</button>
+        </form>
+    </div>
+</div>
+<script>
+    function getCookie(name) {
+        return document.cookie.split('; ').find(c => c.startsWith(name + '='))?.split('=')[1];
+    }
+    if (getCookie('role') === 'admin') {
+        const nav = document.getElementById('navLinks');
+        const dash = document.createElement('a');
+        dash.href = '/dashboard';
+        dash.className = 'btn btn-secondary';
+        dash.textContent = '🛠️ Dashboard';
+        nav.prepend(dash);
+    }
+    if (getCookie('role')) {
+        const authLink = document.getElementById('authLink');
+        authLink.textContent = '🚪 Logout';
+        authLink.href = '/logout';
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Ecommerce</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div class="container" style="max-width: 420px;">
+    <div class="header">
+        <h1>🔐 Sign In</h1>
+    </div>
+
+    <div class="card">
+        <p th:if="${error}" style="color:#b91c1c; font-weight:500;" th:text="${error}"></p>
+        <!-- Debug SQL is echoed back on DB errors - helps students see exactly what query ran -->
+        <pre th:if="${debugSql}" style="white-space:pre-wrap; background:#f8fafc; padding:10px; border-radius:6px; font-size:0.8rem;" th:text="${debugSql}"></pre>
+        <p th:if="${next}" style="color:#4f46e5;">Please sign in to continue to checkout.</p>
+
+        <form method="post" th:action="@{/login}">
+            <div style="margin-bottom: 14px;">
+                <label>Username</label>
+                <input type="text" name="username" style="width:100%; padding:8px; margin-top:4px;" required>
+            </div>
+            <div style="margin-bottom: 14px;">
+                <label>Password</label>
+                <input type="password" name="password" style="width:100%; padding:8px; margin-top:4px;" required>
+            </div>
+            <!-- Carries the caller's return URL through the login POST.
+                 Not validated on the way back out (see AuthController) -
+                 that's an open redirect, deliberately. -->
+            <input type="hidden" name="next" th:value="${next}">
+            <button type="submit" class="btn btn-primary" style="width:100%;">Sign In</button>
+        </form>
+
+        <p style="margin-top: 16px; font-size: 0.9rem;">
+            No account? <a th:href="@{/register(next=${next})}">Register</a>
+        </p>
+    </div>
+
+    <div class="footer">
+        <a th:href="@{/catalog}">Back to Shop</a>
+    </div>
+</div>
+</body>
+</html>

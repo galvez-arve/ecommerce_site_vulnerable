@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Assistant</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 450px;
+            height: 700px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #chat-header {
+            background: #4f46e5;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        #chat-header small {
+            display: block;
+            font-size: 0.8rem;
+            opacity: 0.9;
+            font-weight: normal;
+            margin-top: 5px;
+        }
+
+        #chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 5px;
+        }
+
+        .user-message {
+            justify-content: flex-end;
+        }
+
+        .bot-message {
+            justify-content: flex-start;
+        }
+
+        .message span {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message span {
+            background: #4f46e5;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot-message span {
+            background: white;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Typing indicator */
+        .typing span {
+            background: #e2e8f0;
+            color: #64748b;
+            padding: 12px 20px;
+        }
+
+        .typing span::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        #chat-input-area {
+            display: flex;
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            gap: 10px;
+        }
+
+        #message-input {
+            flex: 1;
+            padding: 14px 18px;
+            border: 1px solid #cbd5e1;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        #message-input:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        #send-button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            font-size: 1.2rem;
+        }
+
+        #send-button:hover {
+            background: #4338ca;
+        }
+
+        #send-button:disabled {
+            background: #a5b4fc;
+            cursor: not-allowed;
+        }
+
+        /* Scrollbar styling */
+        #chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #chat-messages::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        #chat-messages::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .error-message span {
+            background: #fee2e2;
+            color: #b91c1c;
+            border-color: #fecaca;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-header">
+            🤖 Store Assistant
+            <small>Ask about products or place an order</small>
+        </div>
+        <div id="chat-messages">
+            <div class="message bot-message">
+                <span>Hello! I'm your virtual assistant. I can check product availability and help you place orders. How can I help you today?</span>
+            </div>
+        </div>
+        <div id="chat-input-area">
+            <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off" />
+            <button id="send-button" onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURATION – UPDATE THIS URL
+        // ============================================
+        const N8N_WEBHOOK_URL = 'http://192.168.55.221:5678/webhook/5e49c37d-b5ef-4bca-9e26-05a3c2b8de84';
+
+        // Generate a unique session ID for this browser session
+        const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+
+        const chatMessages = document.getElementById('chat-messages');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+
+        // ============================================
+        // HELPER FUNCTIONS
+        // ============================================
+        function addMessage(text, sender, isError = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender + '-message');
+            if (isError) {
+                messageDiv.classList.add('error-message');
+            }
+            const span = document.createElement('span');
+            span.textContent = text;
+            messageDiv.appendChild(span);
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+            return messageDiv;
+        }
+
+        function addTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.classList.add('message', 'bot-message', 'typing');
+            typingDiv.id = 'typing-indicator';
+            const span = document.createElement('span');
+            span.textContent = 'Thinking';
+            typingDiv.appendChild(span);
+            chatMessages.appendChild(typingDiv);
+            scrollToBottom();
+        }
+
+        function removeTypingIndicator() {
+            const typing = document.getElementById('typing-indicator');
+            if (typing) {
+                typing.remove();
+            }
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function setInputEnabled(enabled) {
+            messageInput.disabled = !enabled;
+            sendButton.disabled = !enabled;
+            if (enabled) {
+                messageInput.focus();
+            }
+        }
+
+        // ============================================
+        // SEND MESSAGE TO N8N
+        // ============================================
+        async function sendMessage() {
+            const userMessage = messageInput.value.trim();
+            if (!userMessage) return;
+
+            // Add user message to chat
+            addMessage(userMessage, 'user');
+            messageInput.value = '';
+            setInputEnabled(false);
+            addTypingIndicator();
+
+            try {
+                const response = await fetch(N8N_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+						 sessionId: sessionId
+                    },
+                    body: JSON.stringify({ 
+                        message: userMessage, 
+						sessionId: sessionId
+                    })
+                });
+
+                removeTypingIndicator();
+
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                // n8n may return different response structures.
+                // Common patterns: data.output, data.message, or just data itself.
+                let botReply = data.output || data.message || data.text || JSON.stringify(data);
+                
+                // If the response is an array or object, try to extract meaningful text
+                if (typeof botReply === 'object') {
+                    botReply = botReply.content || botReply.response || JSON.stringify(botReply);
+                }
+                
+                addMessage(botReply, 'bot');
+
+            } catch (error) {
+                console.error('Error communicating with bot:', error);
+                removeTypingIndicator();
+                addMessage('Sorry, I\'m having trouble connecting to my brain. Please try again in a moment.', 'bot', true);
+            } finally {
+                setInputEnabled(true);
+            }
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Focus input on page load
+        window.addEventListener('load', () => {
+            messageInput.focus();
+        });
+
+        // Optional: Add example quick replies (clickable chips)
+        function addQuickReply(text) {
+            messageInput.value = text;
+            sendMessage();
+        }
+
+        // Expose to global scope for any debug
+        window.addQuickReply = addQuickReply;
+    </script>
+
+    <!-- Optional: Add quick reply buttons below the input if desired -->
+    <!-- 
+    <div style="padding: 0 15px 15px; display: flex; gap: 8px; flex-wrap: wrap;">
+        <button onclick="addQuickReply('What products do you have?')" style="background:#e2e8f0; border:none; padding:8px 12px; border-radius:20px; cursor:pointer;">🛍️ Products</button>
+        <button onclick="addQuickReply('I want to place an order')" style="background:#e2e8f0; border:none; padding:8px 12px; border-radius:20px; cursor:pointer;">📦 Order</button>
+    </div>
+    -->
+</body>
+</html>

@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orders | Ecommerce Dashboard</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Shared CSS -->
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+
+<style>
+	.status-select {
+	    padding: 6px 10px;
+	    border-radius: 20px;
+	    border: 1px solid #e2e8f0;
+	    background-color: white;
+	    font-size: 0.85rem;
+	    font-weight: 500;
+	    cursor: pointer;
+	    outline: none;
+	    transition: all 0.2s;
+	    width: 130px;
+	}
+
+	.status-select:hover {
+	    border-color: #4f46e5;
+	    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+	}
+
+	.status-select:focus {
+	    border-color: #4f46e5;
+	    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+	}
+
+	/* Status-specific colors */
+	.status-select option[value="Shipped"] { background-color: #e0e7ff; color: #3730a3; }
+	.status-select option[value="Delivered"] { background-color: #d1fae5; color: #065f46; }
+	.status-select option[value="Cancelled"] { background-color: #fee2e2; color: #991b1b; }
+
+	/* Selected value styling */
+	.status-select {
+	    background-position: right 10px center;
+	    background-repeat: no-repeat;
+	    background-size: 12px;
+	    appearance: none;
+	    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%234b5563' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+	    padding-right: 30px;
+	}
+	.modal {
+	    display: none;
+	    position: fixed;
+	    z-index: 10000;
+	    left: 0;
+	    top: 0;
+	    width: 100%;
+	    height: 100%;
+	    background-color: rgba(0,0,0,0.5);
+	    backdrop-filter: blur(4px);
+	    animation: fadeIn 0.2s;
+	}
+	.modal-content {
+	    background: white;
+	    margin: 10% auto;
+	    padding: 0;
+	    border-radius: 16px;
+	    width: 90%;
+	    max-width: 500px;
+	    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+	    animation: slideIn 0.3s;
+	}
+	.modal-header {
+	    padding: 20px 24px;
+	    border-bottom: 1px solid #e2e8f0;
+	    display: flex;
+	    justify-content: space-between;
+	    align-items: center;
+	}
+	.modal-header h2 {
+	    margin: 0;
+	    font-size: 1.5rem;
+	    color: #1e293b;
+	}
+	.close {
+	    color: #94a3b8;
+	    font-size: 28px;
+	    font-weight: bold;
+	    cursor: pointer;
+	    transition: color 0.2s;
+	}
+	.close:hover {
+	    color: #1e293b;
+	}
+	.modal-body {
+	    padding: 24px;
+	}
+	.detail-row {
+	    display: flex;
+	    padding: 10px 0;
+	    border-bottom: 1px solid #f1f5f9;
+	}
+	.detail-label {
+	    font-weight: 600;
+	    width: 120px;
+	    color: #64748b;
+	}
+	.detail-value {
+	    flex: 1;
+	    color: #1e293b;
+	}
+	.loading-spinner {
+	    text-align: center;
+	    padding: 20px;
+	    color: #64748b;
+	}
+	@keyframes fadeIn {
+	    from { opacity: 0; }
+	    to { opacity: 1; }
+	}
+	@keyframes slideIn {
+	    from { transform: translateY(-20px); opacity: 0; }
+	    to { transform: translateY(0); opacity: 1; }
+	}
+	
+	#confirmProceedBtn {
+	    transition: background 0.2s;
+	}
+	#confirmProceedBtn:hover {
+	    background: #4338ca;
+	}
+	#confirmProceedBtn:disabled {
+	    background: #a5b4fc;
+	    cursor: not-allowed;
+	}
+
+</style>
+<body>
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <h1>📋 Recent Orders</h1>
+        <div class="nav-links">
+            <a href="/dashboard" class="btn btn-secondary">🏠 Dashboard</a>
+            <a href="/users" class="btn btn-secondary">👥 Users</a>
+            <a th:href="@{/catalog}" class="btn btn-secondary">🛍️ Shop</a>
+            <a href="/products" class="btn btn-secondary">📦 Products</a>
+        </div>
+    </div>
+
+    <!-- Search Section -->
+    <div class="card">
+        <div class="search-wrapper">
+            <div class="search-input-group">
+                <input type="text" id="searchInput" placeholder="Search by customer or product..." aria-label="Search orders">
+                <button onclick="loadOrders(0)">🔍 Search</button>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-outline" onclick="clearSearch()">✖ Clear</button>
+                <button class="btn btn-primary" onclick="loadOrders(currentPage)">⟳ Refresh</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Total Price</th>
+					<th>Order Date</th>
+					<th>Order Status</th>   
+					<th>Notes</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- Populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-container">
+        <div class="pagination-controls">
+            <button class="pagination-btn" onclick="previousPage()" id="prevBtn">← Previous</button>
+            <div class="page-numbers" id="pageNumbers"></div>
+            <button class="pagination-btn" onclick="nextPage()" id="nextBtn">Next →</button>
+        </div>
+        <div class="page-info">
+            Page <span id="currentPageDisplay">0</span> of <span id="totalPagesDisplay">0</span> 
+            (<span id="totalItemsDisplay">0</span> items)
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <a href="/dashboard">← Back to Dashboard</a>
+    </div>
+</div>
+
+<!-- User Details Modal -->
+<div id="userModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>👤 Customer Details</h2>
+            <span class="close" onclick="closeUserModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="userModalBody">
+            <!-- Dynamically filled -->
+        </div>
+    </div>
+</div>
+
+<div id="confirmStatusModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h2>⚠️ Confirm Status Change</h2>
+            <span class="close" onclick="closeConfirmModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="confirmModalBody">
+            <!-- Dynamically filled -->
+        </div>
+        <div style="padding: 0 24px 24px 24px; display: flex; gap: 12px; justify-content: flex-end;">
+            <button onclick="closeConfirmModal()" style="padding: 10px 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; cursor: pointer;">Cancel</button>
+            <button id="confirmProceedBtn" style="padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer;">Proceed</button>
+        </div>
+    </div>
+</div>
+
+<!-- Include Chat Widget Fragment -->
+<th:block th:replace="~{fragments/chat-widget :: chat-widget}"></th:block>
+<script th:inline="javascript">
+    let currentPage = 0;
+    let totalPages = 0;
+    let totalItems = 0;
+    const pageSize = 50;  // Fixed page size
+
+    function loadOrders(page) {
+        const search = document.getElementById('searchInput').value;
+        const url = `/api/orders?page=${page}&size=${pageSize}&search=${encodeURIComponent(search)}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                currentPage = data.currentPage;
+                totalPages = data.totalPages;
+                totalItems = data.totalItems;
+                renderTable(data.orders);
+                updatePagination();
+            })
+            .catch(error => console.error('Error loading orders:', error));
+    }
+
+	function renderTable(orders) {
+	    const tbody = document.getElementById('tableBody');
+	    tbody.innerHTML = '';
+	    
+	    if (orders.length === 0) {
+	        const row = tbody.insertRow();
+	        const cell = row.insertCell(0);
+	        cell.colSpan = 8;
+	        cell.style.textAlign = 'center';
+	        cell.style.padding = '40px';
+	        cell.style.color = '#7b8a9b';
+	        cell.textContent = 'No orders found.';
+	        return;
+	    }
+
+	    orders.forEach(order => {
+	        const row = tbody.insertRow();
+	        
+	        // Make the entire row clickable
+	        row.style.cursor = 'pointer';
+	        row.ondblclick = () => openUserModal(order.userId);
+	        
+	        // Order ID (shortened)
+	        row.insertCell(0).textContent = order.id.substring(0, 8) + '...';
+	        
+	        // Customer Name (plain text, no link)
+	        const customerCell = row.insertCell(1);
+	        customerCell.textContent = order.customerName;
+	        customerCell.style.fontWeight = '500';
+	        customerCell.style.color = '#1e293b';
+	        
+	        // Product Name
+	        row.insertCell(2).textContent = order.productName;
+	        
+	        // Quantity
+	        row.insertCell(3).textContent = order.quantity;
+	        
+	        // Total Price
+	        const priceCell = row.insertCell(4);
+	        priceCell.textContent = `$${parseFloat(order.totalPrice).toFixed(2)}`;
+	        priceCell.classList.add('price');
+			
+			const dateCell = row.insertCell(5);
+			dateCell.textContent = order.orderDate || 'N/A'; // Fallback if missing
+			
+
+			const statusCell = row.insertCell(6);
+			const select = document.createElement('select');
+			select.className = 'status-select';
+			select.setAttribute('data-order-id', order.id);
+
+			select.addEventListener('click', (e) => e.stopPropagation());
+			select.addEventListener('mousedown', (e) => e.stopPropagation());
+
+			const statuses = ['Pending','Shipped', 'Delivered', 'Cancelled'];
+			statuses.forEach(status => {
+			    const option = document.createElement('option');
+			    option.value = status;
+			    option.textContent = status;
+			    select.appendChild(option);
+			});
+
+			// Normalize the status from the order (trim, convert to title case for matching)
+			let rawStatus = order.orderStatus || '';
+			let matchedStatus = null;
+
+			// Try exact match first
+			if (statuses.includes(rawStatus)) {
+			    matchedStatus = rawStatus;
+			} else {
+			    // Case-insensitive match
+			    const lowerRaw = rawStatus.trim().toLowerCase();
+			    matchedStatus = statuses.find(s => s.toLowerCase() === lowerRaw);
+			}
+
+			if (!matchedStatus) {
+			    console.warn(`Unknown status "${rawStatus}" for order ${order.id}, defaulting to Pending`);
+			    matchedStatus = 'Pending';
+			}
+
+			select.value = matchedStatus;
+			updateSelectColor(select, matchedStatus);
+
+			// Status change handler
+			select.addEventListener('change', (e) => {
+			    const newStatus = e.target.value;
+			    const orderId = select.dataset.orderId;
+			    
+			    // Temporarily revert visually until confirmed (we'll set back if cancelled)
+			    select.value = matchedStatus;
+			    updateSelectColor(select, matchedStatus);
+			    
+			    // Open confirmation modal
+			    openConfirmModal(orderId, newStatus, select, matchedStatus, order.customerName, order.productName);
+			});
+			statusCell.appendChild(select);
+
+			// Notes column rendered with innerHTML (not textContent): a
+			// shipping note containing HTML/JS executes here - stored XSS.
+			const notesCell = row.insertCell(7);
+			notesCell.innerHTML = order.shippingNotes || '';
+	    });
+	}
+	
+	let pendingStatusChange = {
+	    orderId: null,
+	    newStatus: null,
+	    selectElement: null,
+	    originalStatus: null,
+	    customerName: '',
+	    productName: ''
+	};
+
+	function openConfirmModal(orderId, newStatus, selectElement, originalStatus, customerName, productName) {
+	    pendingStatusChange = { orderId, newStatus, selectElement, originalStatus, customerName, productName };
+	    
+	    const modal = document.getElementById('confirmStatusModal');
+	    const body = document.getElementById('confirmModalBody');
+	    
+	    body.innerHTML = `
+	        <div style="margin-bottom: 20px;">
+	            <p style="margin-bottom: 16px;">Are you sure you want to change the order status?</p>
+	            <div class="detail-row">
+	                <span class="detail-label">Customer</span>
+	                <span class="detail-value"><strong>${customerName}</strong></span>
+	            </div>
+	            <div class="detail-row">
+	                <span class="detail-label">Product</span>
+	                <span class="detail-value"><strong>${productName}</strong></span>
+	            </div>
+	            <div class="detail-row">
+	                <span class="detail-label">New Status</span>
+	                <span class="detail-value" style="font-weight: 600; color: #4f46e5;">${newStatus}</span>
+	            </div>
+	        </div>
+	    `;
+	    
+	    modal.style.display = 'block';
+	}
+
+	function closeConfirmModal() {
+	    document.getElementById('confirmStatusModal').style.display = 'none';
+	    // Revert the select element to original status
+	    if (pendingStatusChange.selectElement) {
+	        pendingStatusChange.selectElement.value = pendingStatusChange.originalStatus;
+	        updateSelectColor(pendingStatusChange.selectElement, pendingStatusChange.originalStatus);
+	    }
+	    pendingStatusChange = {};
+	}
+
+	async function proceedStatusChange() {
+	    const { orderId, newStatus, selectElement, originalStatus } = pendingStatusChange;
+	    if (!orderId) return;
+	    
+	    // Disable proceed button to prevent double-click
+	    const proceedBtn = document.getElementById('confirmProceedBtn');
+	    proceedBtn.disabled = true;
+	    proceedBtn.textContent = 'Updating...';
+	    
+	    try {
+	        const response = await fetch(`/api/orders/${orderId}/status`, {
+	            method: 'PATCH',
+	            headers: { 'Content-Type': 'application/json' },
+	            body: JSON.stringify({ status: newStatus })
+	        });
+	        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			window.location.reload();
+	        // Close modal and refresh page
+	        closeConfirmModal();
+	    
+	    } catch (error) {
+	        console.error('Status update error:', error);
+	        alert('Failed to update status. Please try again.');
+	        // Revert the select
+	        if (selectElement) {
+	            selectElement.value = originalStatus;
+	            updateSelectColor(selectElement, originalStatus);
+	        }
+	        closeConfirmModal();
+	    } finally {
+	        proceedBtn.disabled = false;
+	        proceedBtn.textContent = 'Proceed';
+	    }
+		console.log('Sending PATCH to:', `/api/orders/${orderId}/status`, 'with status:', newStatus);
+	}
+
+	// Attach proceed button handler
+	document.addEventListener('DOMContentLoaded', () => {
+	    const proceedBtn = document.getElementById('confirmProceedBtn');
+	    if (proceedBtn) {
+	        proceedBtn.addEventListener('click', proceedStatusChange);
+	    }
+	});
+
+	// Close confirm modal when clicking outside
+	window.addEventListener('click', (event) => {
+	    const modal = document.getElementById('confirmStatusModal');
+	    if (event.target === modal) {
+	        closeConfirmModal();
+	    }
+	});
+	
+	function updateSelectColor(select, status) {
+	    // Remove existing status classes
+	    select.classList.remove('status-pending', 'status-processing', 'status-shipped', 'status-delivered', 'status-cancelled');
+	    // Add class for current status
+	    const statusClass = 'status-' + status.toLowerCase();
+	    select.classList.add(statusClass);
+	    
+	    // Inline background color based on status (optional)
+	    const colors = {
+	        
+	        'Shipped': '#e0e7ff',
+	        'Delivered': '#d1fae5',
+	        'Cancelled': '#fee2e2'
+	    };
+	    select.style.backgroundColor = colors[status] || 'white';
+	}
+
+	    // 👇 ADD these new functions right after renderTable (or at end of script)
+	    let currentModalUserId = null;
+
+	    function openUserModal(userId) {
+			console.log('openUserModal called with userId:', userId);
+	        currentModalUserId = userId;
+	        const modal = document.getElementById('userModal');
+	        const modalBody = document.getElementById('userModalBody');
+			console.log('Modal element:', modal);
+	        
+	        modalBody.innerHTML = '<div class="loading-spinner">Loading customer details...</div>';
+	        modal.style.display = 'block';
+	        
+	        fetch(`/api/users/${userId}`)
+	            .then(response => {
+	                if (!response.ok) throw new Error('User not found');
+	                return response.json();
+	            })
+	            .then(user => {
+	                modalBody.innerHTML = `
+	                    <div class="detail-row">
+	                        <span class="detail-label">User ID</span>
+	                        <span class="detail-value">${user.id.substring(0, 8)}...</span>
+	                    </div>
+	                    <div class="detail-row">
+	                        <span class="detail-label">Full Name</span>
+	                        <span class="detail-value">${user.fullName}</span>
+	                    </div>
+	                    <div class="detail-row">
+	                        <span class="detail-label">Address</span>
+	                        <span class="detail-value">${user.address || 'Not provided'}</span>
+	                    </div>
+	                    <div class="detail-row">
+	                        <span class="detail-label">Contact</span>
+	                        <span class="detail-value">${user.contactNumber || 'Not provided'}</span>
+	                    </div>
+						<div class="detail-row">
+	                        <span class="detail-label">Email Address</span>
+	                        <span class="detail-value">${user.emailAddress || 'Not provided'}</span>
+	                    </div>
+	                `;
+	            })
+	            .catch(error => {
+	                modalBody.innerHTML = `<div style="color:#dc2626; padding:20px; text-align:center;">Error loading user details.</div>`;
+	                console.error('Error fetching user:', error);
+	            });
+	    }
+
+	    function closeUserModal() {
+	        document.getElementById('userModal').style.display = 'none';
+	        currentModalUserId = null;
+	    }
+
+	    // Close modal when clicking outside
+	    window.onclick = function(event) {
+	        const modal = document.getElementById('userModal');
+	        if (event.target === modal) {
+	            closeUserModal();
+	        }
+	    }
+
+	    // Initial load (keep this at the end)
+	
+
+    function updatePagination() {
+        document.getElementById('currentPageDisplay').textContent = currentPage + 1;
+        document.getElementById('totalPagesDisplay').textContent = totalPages;
+        document.getElementById('totalItemsDisplay').textContent = totalItems;
+
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        prevBtn.disabled = currentPage === 0;
+        nextBtn.disabled = currentPage >= totalPages - 1;
+
+        const pageNumbersDiv = document.getElementById('pageNumbers');
+        pageNumbersDiv.innerHTML = '';
+        
+        const maxVisible = 7;
+        let startPage = Math.max(0, currentPage - Math.floor(maxVisible / 2));
+        let endPage = Math.min(totalPages - 1, startPage + maxVisible - 1);
+        if (endPage - startPage < maxVisible - 1) {
+            startPage = Math.max(0, endPage - maxVisible + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const span = document.createElement('span');
+            span.textContent = i + 1;
+            span.classList.add('page-number');
+            if (i === currentPage) {
+                span.classList.add('active');
+            }
+            span.onclick = () => loadOrders(i);
+            pageNumbersDiv.appendChild(span);
+        }
+    }
+
+    function previousPage() {
+        if (currentPage > 0) {
+            loadOrders(currentPage - 1);
+        }
+    }
+
+    function nextPage() {
+        if (currentPage < totalPages - 1) {
+            loadOrders(currentPage + 1);
+        }
+    }
+
+    function clearSearch() {
+        document.getElementById('searchInput').value = '';
+        loadOrders(0);
+    }
+
+    // Initial load
+    window.onload = () => loadOrders(0);
+</script>
+
+
+
+</body>
+</html>

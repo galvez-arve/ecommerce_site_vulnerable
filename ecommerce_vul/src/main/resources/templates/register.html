@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | Ecommerce</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div class="container" style="max-width: 460px;">
+    <div class="header"><h1>📝 Create Account</h1></div>
+    <div class="card">
+        <form method="post" th:action="@{/register}">
+            <div style="margin-bottom: 12px;"><label>First name</label>
+                <input type="text" name="name" style="width:100%; padding:8px; margin-top:4px;" required></div>
+            <div style="margin-bottom: 12px;"><label>Last name</label>
+                <input type="text" name="lastname" style="width:100%; padding:8px; margin-top:4px;" required></div>
+            <div style="margin-bottom: 12px;"><label>Username</label>
+                <input type="text" name="username" style="width:100%; padding:8px; margin-top:4px;" required></div>
+            <div style="margin-bottom: 12px;"><label>Password</label>
+                <input type="password" name="password" style="width:100%; padding:8px; margin-top:4px;" required></div>
+            <!-- Hidden but still a real, bound request parameter: the server
+                 trusts whatever "role" arrives here (mass assignment). -->
+            <input type="hidden" name="role" value="user">
+            <input type="hidden" name="next" th:value="${next}">
+            <button type="submit" class="btn btn-primary" style="width:100%;">Register</button>
+        </form>
+    </div>
+    <div class="footer"><a th:href="@{/login(next=${next})}">Already have an account? Sign in</a></div>
+</div>
+</body>
+</html>

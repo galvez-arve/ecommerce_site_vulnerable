@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop | Ecommerce</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <style>
+        .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap:20px; }
+        .pcard { background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+        .pcard img { width:100%; height:160px; object-fit:cover; display:block; background:#f1f5f9; }
+        .pcard .body { padding:12px; }
+        .pcard h3 { font-size:0.95rem; margin:0 0 6px 0; }
+        .pcard .price { font-weight:600; color:#4f46e5; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🛍️ Shop</h1>
+        <div class="nav-links" id="navLinks">
+            <a th:href="@{/checkout}" class="btn btn-secondary">🛒 Cart</a>
+            <a th:href="@{/login}" class="btn btn-secondary" id="authLink">👤 Login</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="search-wrapper">
+            <div class="search-input-group">
+                <input type="text" id="searchInput" th:value="${searchTerm}" placeholder="Search products...">
+                <button onclick="search()">🔍 Search</button>
+            </div>
+        </div>
+        <!-- Rendered unescaped: a search term containing markup/script runs
+             here -> reflected XSS (e.g. ?q=<img src=x onerror=alert(1)>). -->
+        <p th:if="${searchTerm}" th:utext="'Showing results for: ' + ${searchTerm}"></p>
+    </div>
+
+    <div id="grid" class="grid"></div>
+
+    <div class="pagination-container">
+        <div class="pagination-controls">
+            <button class="pagination-btn" onclick="prevPage()" id="prevBtn">← Previous</button>
+            <div class="page-numbers" id="pageNumbers"></div>
+            <button class="pagination-btn" onclick="nextPage()" id="nextBtn">Next →</button>
+        </div>
+    </div>
+
+    <div class="footer">Ecommerce Shop</div>
+</div>
+
+<script th:inline="javascript">
+    let currentPage = 0, totalPages = 0;
+    const initialSearch = /*[[${searchTerm}]]*/ '';
+
+    function load(page) {
+        const q = document.getElementById('searchInput').value;
+        fetch(`/api/products?page=${page}&size=24&search=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            .then(data => {
+                currentPage = data.currentPage;
+                totalPages = data.totalPages;
+                render(data.products);
+                updatePagination();
+            });
+    }
+
+    function render(products) {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        products.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'pcard';
+            const img = document.createElement('img');
+            img.src = p.imageUrl || 'https://picsum.photos/seed/placeholder/400/300';
+            img.loading = 'lazy';
+            card.appendChild(img);
+            const body = document.createElement('div');
+            body.className = 'body';
+            body.innerHTML = `
+                <h3>${p.productName}</h3>
+                <div class="price">$${parseFloat(p.productPrice).toFixed(2)}</div>
+                <a href="/catalog/product?id=${p.id}" class="btn btn-outline" style="margin-top:8px; display:inline-block;">View</a>
+            `;
+            card.appendChild(body);
+            grid.appendChild(card);
+        });
+    }
+
+    function updatePagination() {
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        prevBtn.disabled = currentPage === 0;
+        nextBtn.disabled = currentPage >= totalPages - 1;
+    }
+    function prevPage() { if (currentPage > 0) load(currentPage - 1); }
+    function nextPage() { if (currentPage < totalPages - 1) load(currentPage + 1); }
+    function search() { load(0); }
+
+    document.getElementById('searchInput').value = initialSearch || '';
+    window.onload = () => load(0);
+
+    // "Hidden" admin entry point: the Dashboard button is only injected if
+    // a role=admin cookie is present. This is a convenience/UX hide, not a
+    // security control - the same unsigned, client-readable cookie that
+    // AdminAccessFilter trusts server-side is what's being read here, so
+    // it's exactly as easy to forge (devtools -> Application -> Cookies ->
+    // set role=admin) as the server-side bypass itself.
+    function getCookie(name) {
+        return document.cookie.split('; ').find(c => c.startsWith(name + '='))?.split('=')[1];
+    }
+    if (getCookie('role') === 'admin') {
+        const nav = document.getElementById('navLinks');
+        const dash = document.createElement('a');
+        dash.href = '/dashboard';
+        dash.className = 'btn btn-secondary';
+        dash.textContent = '🛠️ Dashboard';
+        nav.prepend(dash);
+    }
+    if (getCookie('role')) {
+        const authLink = document.getElementById('authLink');
+        authLink.textContent = '🚪 Logout';
+        authLink.href = '/logout';
+    }
+</script>
+<th:block th:replace="fragments/chat-widget :: chat-widget"></th:block>
+</body>
+</html>

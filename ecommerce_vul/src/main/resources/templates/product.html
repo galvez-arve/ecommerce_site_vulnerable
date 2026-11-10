@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product | Ecommerce</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📦 Product</h1>
+        <div class="nav-links" id="navLinks">
+            <a th:href="@{/catalog}" class="btn btn-secondary">🛍️ Back to Shop</a>
+            <a th:href="@{/checkout}" class="btn btn-secondary">🛒 Cart</a>
+            <a th:href="@{/login}" class="btn btn-secondary" id="authLink">👤 Login</a>
+        </div>
+    </div>
+
+    <div class="card" th:if="${error}">
+        <p style="color:#b91c1c; font-weight:500;" th:text="${error}"></p>
+        <pre th:if="${debugSql}" style="white-space:pre-wrap; background:#f8fafc; padding:10px; border-radius:6px; font-size:0.8rem;" th:text="${debugSql}"></pre>
+    </div>
+
+    <div class="card" th:if="${notFoundMessage}">
+        <!-- Reflected: the raw id you passed is echoed back. -->
+        <p th:utext="${notFoundMessage}"></p>
+    </div>
+
+    <div class="card" th:if="${product}">
+        <div style="display:flex; gap:24px; flex-wrap:wrap;">
+            <img th:src="${product.image_url}" style="width:320px; height:320px; object-fit:cover; border-radius:10px; background:#f1f5f9;">
+            <div style="flex:1; min-width:260px;">
+                <h2 th:text="${product.product_name}"></h2>
+                <p class="price" style="font-size:1.4rem; font-weight:700; color:#4f46e5;"
+                   th:text="'$' + ${product.product_price}"></p>
+                <p>In stock: <span th:text="${product.no_of_quantity}"></span></p>
+                <p>Discount: <span th:text="${product.voucher_discount} + '%'"></span></p>
+
+                <form method="post" th:action="@{/cart/add}" style="margin-top:20px;">
+                    <input type="hidden" name="productId" th:value="${product.id}">
+                    <input type="hidden" name="productName" th:value="${product.product_name}">
+                    <!-- Price travels through the client as a plain hidden
+                         field and is trusted as-is by /cart/add and
+                         /checkout - change it in devtools and the order
+                         total follows. -->
+                    <input type="hidden" name="price" id="priceField" th:value="${product.product_price}">
+                    <input type="hidden" name="discount" th:value="${product.voucher_discount}">
+                    <label>Quantity</label>
+                    <input type="number" name="quantity" value="1" min="1" style="width:80px; margin:0 10px;">
+                    <button type="submit" class="btn btn-primary">Add to Cart</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" th:if="${extraRows}">
+        <h3>Additional data returned by the query</h3>
+        <pre style="white-space:pre-wrap;" th:text="${extraRows}"></pre>
+    </div>
+
+    <div class="footer"><a th:href="@{/catalog}">Back to Shop</a></div>
+</div>
+<script>
+    function getCookie(name) {
+        return document.cookie.split('; ').find(c => c.startsWith(name + '='))?.split('=')[1];
+    }
+    if (getCookie('role') === 'admin') {
+        const nav = document.getElementById('navLinks');
+        const dash = document.createElement('a');
+        dash.href = '/dashboard';
+        dash.className = 'btn btn-secondary';
+        dash.textContent = '🛠️ Dashboard';
+        nav.prepend(dash);
+    }
+    if (getCookie('role')) {
+        const authLink = document.getElementById('authLink');
+        authLink.textContent = '🚪 Logout';
+        authLink.href = '/logout';
+    }
+</script>
+</body>
+</html>

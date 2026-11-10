@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Joint Probability Graph</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; }
+        canvas { max-width: 900px; margin: 20px auto; display: block; }
+        h1 { text-align: center; }
+        .info { text-align: center; margin-bottom: 20px; color: #555; }
+    </style>
+</head>
+<body>
+    <h1>Joint Probability: Product & Customer City</h1>
+    <div class="info">P(product name AND city) = (orders with that pair) / (total orders)</div>
+    <canvas id="jointChart" width="800" height="500"></canvas>
+
+    <script>
+        fetch('/api/analytics/product-city-joint')
+            .then(response => response.json())
+            .then(data => {
+                // Prepare labels: "ProductName (City)"
+                const labels = data.map(item => `${item.eventA} (${item.eventB})`);
+                const probabilities = data.map(item => item.jointProbability);
+
+                const ctx = document.getElementById('jointChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Joint Probability',
+                            data: probabilities,
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Probability' },
+                                ticks: { callback: function(value) { return value * 100 + '%'; } }
+                            },
+                            x: {
+                                title: { display: true, text: 'Product (City)' },
+                                ticks: { autoSkip: true, maxTicksLimit: 12, rotation: 45 }
+                            }
+                        },
+                        plugins: {
+                            tooltip: { callbacks: { label: (ctx) => `${(ctx.raw * 100).toFixed(2)}%` } }
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error loading chart data:', error);
+                document.body.innerHTML += '<p style="color:red;">Failed to load data. Check console.</p>';
+            });
+    </script>
+</body>
+</html>

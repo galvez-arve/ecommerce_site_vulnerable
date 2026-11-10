@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Product | Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>➕ Add Product</h1>
+        <div class="nav-links"><a href="/products" class="btn btn-secondary">📦 Products</a></div>
+    </div>
+
+    <div class="card">
+        <form method="post" th:action="@{/admin/products/new}" enctype="multipart/form-data">
+            <div style="margin-bottom:12px;"><label>Product name</label>
+                <input type="text" name="productName" style="width:100%; padding:8px; margin-top:4px;" required></div>
+            <div style="margin-bottom:12px;"><label>Price</label>
+                <input type="text" name="productPrice" style="width:100%; padding:8px; margin-top:4px;" required></div>
+            <div style="margin-bottom:12px;"><label>Quantity</label>
+                <input type="number" name="noOfQuantity" style="width:100%; padding:8px; margin-top:4px;" required></div>
+            <div style="margin-bottom:12px;"><label>Voucher discount %</label>
+                <input type="text" name="voucherDiscount" value="0" style="width:100%; padding:8px; margin-top:4px;"></div>
+            <div style="margin-bottom:12px;"><label>Expiration date (YYYY-MM-DD, optional)</label>
+                <input type="text" name="expirationDate" style="width:100%; padding:8px; margin-top:4px;"></div>
+
+            <div style="margin-bottom:12px;">
+                <label>Image URL (fetched/displayed as-is, no validation)</label>
+                <input type="text" name="imageUrl" style="width:100%; padding:8px; margin-top:4px;" placeholder="https://...">
+                <p style="font-size:0.8rem; color:#7b8a9b;">
+                    You can preview any URL through the fetcher at
+                    <code>/image-proxy?url=...</code> before saving - it has no
+                    allowlist, so http(s), and even file:// targets are fetched
+                    server-side.
+                </p>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <label>Or upload an image file</label>
+                <input type="file" name="imageFile" style="width:100%; padding:8px; margin-top:4px;">
+                <p style="font-size:0.8rem; color:#7b8a9b;">
+                    No extension or content-type check, and the filename you
+                    send is used as-is on disk.
+                </p>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%;">Save Product</button>
+        </form>
+    </div>
+    <div class="footer"><a href="/products">Back to Products</a></div>
+</div>
+</body>
+</html>
